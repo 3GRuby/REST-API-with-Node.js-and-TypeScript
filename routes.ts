@@ -1,32 +1,67 @@
 import { Express, Request, Response } from "express";
 import {
-  createUserHandler,
+  createPostHandler,
+  updatePostHandler,
+  getPostHandler,
+  deletePostHandler,
+} from "./src/controller/post.controller";
+import { createUserHandler } from "./src/controller/user.controller";
+import {
   createUserSessionHandler,
-} from "./src/controller/user.controller";
-import validateRequest from "./src/middleware/validateRequest";
+  invalidateUserSessionHandler,
+  getUserSessionsHandler,
+} from "./src/controller/session.controller";
+import { validateRequest, requiresUser } from "./src/middleware";
 import {
   createUserSchema,
-  createSessionSchema,
+  createUserSessionSchema,
 } from "./src/schema/user.schema";
+import {
+  createPostSchema,
+  updatePostSchema,
+  deletePostSchema,
+} from "./src/schema/post.schema";
 
 export default function (app: Express) {
   app.get("/healthcheck", (req: Request, res: Response) => res.sendStatus(200));
 
-  //Register User
-  //POST /api/user
+  // Register user
   app.post("/api/users", validateRequest(createUserSchema), createUserHandler);
 
-  //Login User
-  //POST /api/sessions
+  // Login
   app.post(
     "/api/sessions",
-    validateRequest(createSessionSchema),
+    validateRequest(createUserSessionSchema),
     createUserSessionHandler
   );
 
-  //Get the user´s sessions
-  // GET /api / sessions
+  // Get the user's sessions
+  app.get("/api/sessions", requiresUser, getUserSessionsHandler);
 
-  // logout
-  // DELETE /api/sessions
+  // Logout
+  app.delete("/api/sessions", requiresUser, invalidateUserSessionHandler);
+
+  // Create a post
+  app.post(
+    "/api/posts",
+    [requiresUser, validateRequest(createPostSchema)],
+    createPostHandler
+  );
+
+  // Update a post
+  app.put(
+    "/api/posts/:postId",
+    [requiresUser, validateRequest(updatePostSchema)],
+    updatePostHandler
+  );
+
+  // Get a post
+  app.get("/api/posts/:postId", getPostHandler);
+
+  // Delete a post
+  app.delete(
+    "/api/posts/:postId",
+    [requiresUser, validateRequest(deletePostSchema)],
+    deletePostHandler
+  );
 }
